@@ -154,4 +154,12 @@ Details: **[How it works](docs/08-how-it-works.md)**.
 
 ---
 
+## 🙏 Credits
+
+LectureVault grew out of **[video-downloader-ext](https://github.com/faridhafizh/video-downloader-ext)** by **[@faridhafizh](https://github.com/faridhafizh)** — a Chrome extension that detects, decrypts (AES-128) and downloads HLS, MP4 and WebM streams. Its stream detection and download approach was the starting point and inspiration for this project (versions before 1.4 in the [Changelog](docs/CHANGELOG.md)). Thank you!
+
+Everything added later — subtitles/transcripts, course naming, the Data & speed saver, Auto-capture and Autopilot — was built on top of that idea.
+
+---
+
 <sub>Personal study tool. Keep this repository **private**. Don't share downloaded course material. See [Risks & safe use](docs/06-risks-and-safe-use.md).</sub>
