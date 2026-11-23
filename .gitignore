@@ -1,0 +1,28 @@
+# ---- Never upload these ----
+# Saved course web pages (contain your account name) and their asset folders
+*.mhtml
+*.mht
+*_files/
+*.htm
+saved-pages/
+
+# Course material / downloads
+*.mp4
+*.webm
+*.ts
+*.mkv
+*.srt
+*.vtt
+Transcripts/
+Lectures/
+eJPT/
+
+# Archives and builds
+*.zip
+*.crx
+*.pem
+
+# System junk
+Thumbs.db
+desktop.ini
+.DS_Store

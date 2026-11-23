@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LectureVault</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="logo-container">
+      <!-- LectureVault logo -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+        <defs>
+          <linearGradient id="lv-g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fbbf24"/><stop offset="0.5" stop-color="#f97316"/><stop offset="1" stop-color="#e11d48"/>
+          </linearGradient>
+          <linearGradient id="lv-s" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#lv-g)"/>
+        <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#lv-s)"/>
+        <!-- lecture page -->
+        <rect x="30" y="20" width="62" height="82" rx="11" fill="#fff"/>
+        <!-- play button -->
+        <circle cx="61" cy="46" r="15" fill="#f97316"/>
+        <path d="M56 38.5 L69 46 L56 53.5 Z" fill="#fff"/>
+        <!-- transcript lines -->
+        <rect x="40" y="70" width="42" height="6" rx="3" fill="#fdba74"/>
+        <rect x="40" y="82" width="30" height="6" rx="3" fill="#fed7aa"/>
+        <!-- download badge -->
+        <circle cx="93" cy="95" r="21" fill="#1f2937" stroke="#fff" stroke-width="5"/>
+        <path d="M93 84 V103 M85 96 L93 104 L101 96" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="logo-title">LectureVault</span>
+    </div>
+
+    <div class="action-buttons">
+      <!-- Clear list of detected videos on this tab -->
+      <button id="clear-list" class="header-btn" title="Clear detected videos">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="subs">Subtitles <span id="subs-count" class="badge">0</span></button>
+    <button class="tab" data-tab="videos">Videos <span id="vl-count" class="badge">0</span></button>
+    <button class="tab" data-tab="auto">Autopilot <span id="ap-dot" class="ap-dot" hidden></span></button>
+  </nav>
+
+  <div class="subs-toolbar" id="auto-capture-bar">
+    <button id="ac-start" class="mini" title="Opens and briefly plays every lecture on this page, one after another, so subtitles and videos get captured without you clicking each one. It also marks each lecture as watched on INE.">Auto-capture lectures on this page</button>
+    <button id="ac-stop" class="mini danger" hidden>Stop</button>
+    <span class="spacer"></span>
+    <label title="How long to let each lecture play before moving to the next. Kept on the slower side on purpose — plus a randomized gap between lectures and a longer pause every 6, and the run stops after 20 lectures so a whole course isn't opened back to back.">Seconds/lecture <input type="number" id="ac-wait" min="8" max="45" value="12" style="width:46px"></label>
+  </div>
+  <div id="ac-status" class="batch-status"></div>
+
+  <!-- ===================== AUTOPILOT TAB ===================== -->
+  <section id="tab-auto" class="tab-panel" hidden>
+    <div class="ap-status-box">
+      <div class="ap-status-line"><span id="ap-state" class="ap-state">Idle</span><span id="ap-status">Open a learning path page and press "Scan this learning path".</span></div>
+      <div id="ap-live" class="ap-live" hidden>
+        <div class="ap-live-title" id="ap-live-title"></div>
+        <div class="net-bar"><span id="ap-live-bar"></span></div>
+        <div class="ap-live-meta" id="ap-live-meta"></div>
+      </div>
+      <div class="ap-prog" id="ap-prog-all" hidden>
+        <div class="ap-prog-head"><span>Learning path</span><span id="ap-prog-all-txt"></span></div>
+        <div class="net-bar"><span id="ap-prog-all-bar"></span></div>
+      </div>
+      <div class="ap-prog" id="ap-prog-vid" hidden>
+        <div class="ap-prog-head"><span id="ap-prog-vid-name">Video download</span><span id="ap-prog-vid-txt"></span></div>
+        <div class="net-bar"><span id="ap-prog-vid-bar" class="vid"></span></div>
+        <div class="ap-live-meta" id="ap-prog-vid-meta"></div>
+      </div>
+      <div class="ap-stats" id="ap-stats"></div>
+      <div class="ap-last" id="ap-last"></div>
+    </div>
+    <div class="subs-toolbar">
+      <button id="ap-scan" class="mini" title="Open the learning path page (the one listing every course) and press this. Scroll to the bottom of that page once first.">Scan this learning path</button>
+      <button id="ap-add" class="mini" title="Add only the course page that is open now">Add this course</button>
+      <span class="spacer"></span>
+      <button id="ap-clear" class="mini danger" title="Empty the queue (does not touch downloaded files)">Clear</button>
+    </div>
+    <div class="ap-buttons">
+      <button id="ap-start" class="btn-primary">▶ Start / Resume</button>
+      <button id="ap-stop" class="btn-secondary danger" hidden>■ Stop</button>
+    </div>
+    <div class="subs-toolbar ap-listbar">
+      <b id="ap-path-name">No learning path scanned yet</b>
+      <span class="spacer"></span>
+      <button id="ap-all" class="mini" title="Tick every course">All</button>
+      <button id="ap-none" class="mini" title="Untick everything">None</button>
+    </div>
+    <div id="ap-list" class="ap-list"></div>
+
+    <details class="naming" id="ap-settings" open>
+      <summary>Autopilot settings</summary>
+      <div class="opt-row net-grid">
+        <label title="Shortest share of each lecture to watch (used for long lectures)">Watch min <input type="number" id="ap-min" min="5" max="95" value="35"> %</label>
+        <label title="Largest share of each lecture to watch (used for short lectures)">max <input type="number" id="ap-max" min="5" max="95" value="60"> %</label>
+      </div>
+      <div class="opt-row net-grid">
+        <label title="Optional: Autopilot stops after this many lectures in one calendar day. 0 = off.">Max lectures/day <input type="number" id="ap-maxday" min="0" max="500" value="0"></label>
+        <span class="ap-meta" id="ap-today"></span>
+      </div>
+      <div class="opt-row net-slider" id="ap-time-wrap">
+        <div class="net-slider-head"><b id="ap-time-name">Stop after: Off</b><span id="ap-time-text">runs until you press Stop</span></div>
+        <input type="range" id="ap-time" min="0" max="8" step="1" value="0">
+        <div class="net-slider-ends"><span>Off</span><span>8 h</span></div>
+      </div>
+      <div class="opt-row checks">
+        <label title="Sets INE's player to its lowest quality while autopilot watches. Strongly recommended on mobile data."><input type="checkbox" id="ap-lowq" checked> Lowest player quality (saves data)</label>
+        <label><input type="checkbox" id="ap-mute" checked> Mute the player</label>
+        <label title="Each new transcript is saved right after its lecture, using the Subtitles-tab folder and format settings."><input type="checkbox" id="ap-txt" checked> Auto-download transcripts</label>
+        <label title="Downloads each lecture's video too, with the Data &amp; speed saver settings. Uses a LOT of data."><input type="checkbox" id="ap-vid" checked> Auto-download videos (uses Data &amp; speed saver quality/speed)</label>
+        <label title="Skip lectures INE already shows as completed"><input type="checkbox" id="ap-skip"> Skip lectures already completed on INE</label>
+      </div>
+      <p class="path-hint">For overnight runs: keep the laptop plugged in, set Windows sleep to <b>Never</b>, keep the INE tab in front and the Chrome window not minimized (Chrome pauses hidden videos). The screen may turn off. Autopilot ignores the daily <i>data</i> limit. It stops when you press Stop, when <b>Stop after</b> time is up, at <b>Max lectures/day</b> (if set), or when INE shows its daily viewing-limit message. <b>Advice:</b> no more than 30–40 videos a day, then a day off or at least a 10–14 h gap.</p>
+    </details>
+    <details class="naming"><summary>Activity log</summary><pre id="ap-log" class="ap-log"></pre></details>
+  </section>
+
+  <!-- ===================== SUBTITLES TAB ===================== -->
+  <section id="tab-subs" class="tab-panel">
+    <div class="subs-toolbar">
+      <label class="en-toggle" title="Capture and show English subtitles only"><input type="checkbox" id="english-only" checked> English only</label>
+      <span class="spacer"></span>
+      <button id="sel-all" class="mini" title="Tick everything shown">All</button>
+      <button id="sel-none" class="mini" title="Untick everything">None</button>
+      <button id="subs-clear" class="mini danger" title="Remove every captured subtitle">Clear</button>
+    </div>
+    <div id="hidden-note" class="hidden-note" hidden></div>
+
+    <div id="subs-list" class="subs-list"></div>
+
+    <details class="naming" id="naming-panel">
+      <summary>Names &amp; folders <span id="naming-chosen"></span></summary>
+      <p class="diag-help">What the extension reads on the lecture page that is open right now. If a line is wrong or “not found”, press <b>Pick</b> and click that text on the page once — it is remembered for the whole site.</p>
+      <div id="place-box" class="place-box"></div>
+      <div id="place-path" class="place-path"></div>
+      <details class="other-src">
+        <summary>Other places the lecture title could come from</summary>
+        <div id="name-cands"></div>
+      </details>
+      <div class="opt-row row-btns"><button id="naming-reset" class="mini">Reset all picks</button></div>
+      <div id="naming-note" class="diag-help"></div>
+    </details>
+
+    <div class="subs-footer">
+      <div class="opt-row">
+        <label>Save as
+          <select id="opt-format">
+            <option value="txt">Transcripts only (.txt) — recommended</option>
+            <option value="srt">Subtitles only (.srt, into the video folders)</option>
+            <option value="both">Both</option>
+          </select>
+        </label>
+      </div>
+      <div class="opt-row checks">
+        <label><input type="checkbox" id="opt-prefix" checked> Number folders and files (01, 02 ...)</label>
+        <label><input type="checkbox" id="opt-zip"> Save everything as one .zip file</label>
+        <label><input type="checkbox" id="opt-combine"> Also add one combined .txt (all lectures in order)</label>
+        <label><input type="checkbox" id="opt-structure" checked> Same folders as INE (Course › Category › Section)</label>
+      </div>
+      <div class="opt-row">
+        <label>Folder (inside Downloads) <input type="text" id="opt-folder" value="eJPT" spellcheck="false"></label>
+      </div>
+      <p class="path-hint">.txt goes to <b>Transcripts/</b>. The .srt is saved automatically with each video (Videos tab) in <b>Lectures/</b>.</p>
+      <button id="btn-all-txt" class="btn btn-primary" disabled>Download all transcripts (0) — .txt</button>
+      <button id="btn-batch" class="btn btn-secondary" style="margin-top:6px" disabled>Download selected (0)</button>
+      <div id="batch-status" class="batch-status"></div>
+
+      <details class="diag">
+        <summary>Diagnostics (if nothing is detected)</summary>
+        <p class="diag-help">Requests the browser saw that look like captions. If a lecture shows nothing above, play it for 10 seconds with CC on, reopen this box, and copy this list.</p>
+        <pre id="diag-out"></pre>
+        <button id="diag-copy" class="mini">Copy</button>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===================== VIDEOS TAB ===================== -->
+  <section id="tab-videos" class="tab-panel" hidden>
+    <div class="subs-toolbar">
+      <span class="vl-hint">Play each lecture for a few seconds — it appears here in course order.</span>
+      <span class="spacer"></span>
+      <button id="vl-all" class="mini">All</button>
+      <button id="vl-none" class="mini">None</button>
+      <button id="vl-clear" class="mini danger" title="Remove every video from this list">Clear</button>
+    </div>
+    <div id="vl-list" class="subs-list"></div>
+
+    <div class="subs-footer">
+      <details class="naming net-saver" id="net-panel" open>
+        <summary>Data &amp; speed saver <span id="net-summary"></span></summary>
+        <div class="opt-row">
+          <label title="Lower quality = much less data per video. This is the setting that actually saves data.">Video quality
+            <select id="net-quality">
+              <option value="360">360p — least data</option>
+              <option value="480">480p — small</option>
+              <option value="720">720p — balanced (default)</option>
+              <option value="1080">1080p — large</option>
+              <option value="best">Best available</option>
+              <option value="lowest">Lowest available</option>
+            </select>
+          </label>
+        </div>
+        <div class="opt-row">
+          <label title="How fast videos download. Slower = lighter on your laptop and network, but it does not reduce the total data.">Speed
+            <select id="net-pace">
+              <option value="realtime">By video length (choose below)</option>
+              <option value="limit">Fixed limit (KB/s)</option>
+              <option value="off">Full speed</option>
+            </select>
+          </label>
+        </div>
+        <div class="opt-row net-slider" id="net-factor-wrap">
+          <div class="net-slider-head"><b id="net-factor-name">Like watching</b><span id="net-factor-text">5-min video ≈ 4 min</span></div>
+          <input type="range" id="net-factor" min="0" max="5" step="1" value="1">
+          <div class="net-slider-ends"><span>slower · lighter</span><span>faster · heavier</span></div>
+        </div>
+        <div class="opt-row net-grid">
+          <label id="net-speed-wrap" title="Maximum total download speed in kilobytes per second (all downloads together). 250 KB/s ≈ 2 Mbps.">Limit <input type="number" id="net-speed" min="16" max="10000" step="10" value="250"> KB/s <span id="net-speed-mb" class="net-mini"></span></label>
+          <label id="net-par-wrap" title="How many video pieces are fetched at the same time. 1 is lightest on CPU and RAM. 'Like watching' always uses 1.">Parallel <input type="number" id="net-par" min="1" max="5" value="1"></label>
+          <label title="Rest between videos when downloading a list.">Wait <input type="number" id="net-delay" min="0" max="1800" step="5" value="60"> s</label>
+          <label title="Stop starting new videos after this much data today. 0 = no limit.">Daily limit <input type="number" id="net-limit" min="0" max="100000" step="100" value="1500"> MB</label>
+        </div>
+        <div class="net-usage">
+          <div class="net-bar"><span id="net-bar-fill"></span></div>
+          <span id="net-used">Used today: 0 MB</span>
+          <button id="net-reset" class="mini" title="Set today's counter back to 0">Reset</button>
+        </div>
+        <p class="path-hint">Tip: slowing the speed only spreads the data out. To use <b>less</b> data, lower the quality or download only the lectures you need. Transcripts (.srt/.txt) use almost no data.</p>
+      </details>
+      <div class="opt-row checks">
+        <label><input type="checkbox" id="vid-prefix" checked> Number folders and files (01, 02 ...)</label>
+        <label><input type="checkbox" id="vid-subs" checked> Save the subtitle (.srt) next to each video</label>
+      </div>
+      <div class="opt-row">
+        <label>Folder (inside Downloads) <input type="text" id="vid-folder" value="eJPT" spellcheck="false"></label>
+      </div>
+      <p class="path-hint">Saved one after another, in course order, to <b>Lectures/</b> Course / NN Category / NN Section / NN Lecture (+ .srt)</p>
+      <button id="vl-dl-all" class="btn btn-primary" disabled>Download all videos (0)</button>
+      <div class="row-btns" style="margin-top:6px">
+        <button id="vl-dl-sel" class="btn btn-secondary" disabled>Download selected (0)</button>
+        <button id="vl-stop" class="btn btn-secondary" hidden>Stop after this video</button>
+      </div>
+      <div id="vl-status" class="batch-status"></div>
+    </div>
+
+    <!-- old per-page list, kept hidden (its script still runs) -->
+    <div hidden>
+      <span id="detected-count"></span>
+      <button id="vid-sel-all"></button><button id="vid-sel-none"></button>
+      <div id="video-list"></div>
+      <button id="btn-vid-batch"></button><div id="vid-batch-status"></div>
+    </div>
+  </section>
+
+  <script src="subtitle-utils.js"></script>
+  <script src="popup.js"></script>
+  <script src="subs.js"></script>
+  <script src="videos.js"></script>
+  <script src="netprefs.js"></script>
+  <script src="autopilot-ui.js"></script>
+  <script src="autocap.js"></script>
+</body>
+</html>

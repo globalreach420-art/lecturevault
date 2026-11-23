@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "LectureVault",
+  "version": "1.13.0",
+  "description": "Captures lecture transcripts and videos while you study, names and sorts them by course, and can run a whole learning path on autopilot.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage",
+    "unlimitedStorage",
+    "webRequest",
+    "webNavigation",
+    "alarms",
+    "tabs",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
